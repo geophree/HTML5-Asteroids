@@ -1,31 +1,39 @@
+<!DOCTYPE html>
 <html>
-  <head>
-    <script src="jquery-1.4.1.min.js"></script>
-    <script src="vector_battle_regular.typeface.js"></script>
-    <script src="ipad.js"></script>
-    <script src="game.js"></script>
-    <style>
-      #canvas { border:1px solid black; top:0px; left:0px; }
-      .button { position:absolute; border:1px solid black; }
-      #left-controls { position:absolute; left:1px; bottom:0px; display:none; }
-      #right-controls { position:absolute; right:1px; bottom:0px; display:none; }
-      #up { width:200px; height:100px; bottom:100px;}
-      #left { width:100px; height:100px; bottom:0px;}
-      #right { width:100px; height:100px; bottom:0px; left:100px; }
-      #space { width:200px; height:200px; bottom:0px; right:0px; }
-    </style>
-  </head>
-  <body>
-    <div id="game-container">
-      <canvas id="canvas" width="780" height="540"></canvas>
-      <div id="left-controls">
-        <div id="up" class='button'>THRUST</div>
-        <div id="left" class='button'>LEFT</div>
-        <div id="right" class='button'>RIGHT</div>
-      </div>
-      <div id="right-controls">
-        <div id="space" class='button'>FIRE</div>
-      </div>
-    </div>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <title>Astroids with Couchfriends!</title>
+  <script src="jquery-1.4.1.min.js"></script>
+  <script src="vector_battle_regular.typeface.js"></script>
+  <script src="http://cdn.couchfriends.com/js/couchfriends.api-latest.js"></script>
+  <script src="game.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #info {
+      font-family: Arial, Verdana, "Helvetica Neue", Helvetica, sans-serif;
+      position: absolute;
+      right: 0;
+      top: 0;
+      padding: 10px;
+      font-size: 22px;
+      color: #000;
+      background-color: rgba(255,255,255,.5);
+      border: 1px solid #ddd;
+      max-width: 250px;
+    }
+  </style>
+</head>
+<body>
+<canvas id="canvas" width="780" height="540"></canvas>
+<div id="info"></div>
+</body>
 </html>
