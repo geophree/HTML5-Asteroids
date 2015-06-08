@@ -1224,6 +1224,7 @@ function addPlayer(playerId) {
 
     var ship = new Ship();
 
+    ship.name = 'ship';
     ship.x = Game.canvasWidth / 2;
     ship.y = Game.canvasHeight / 2;
 
@@ -1239,9 +1240,18 @@ function addPlayer(playerId) {
     ship.vel.y = 0;
     ship.visible = true;
     Game.sprites.push(ship);
-    Game.ships[playerId] = ship;
+    Game.ships['player_' + playerId] = ship;
 
 }
+
+function removePlayer(playerId) {
+    var playerShip = Game.ships['player_' + playerId];
+
+    playerShip.name = 'ship-dead';
+    Game.sprites.splice(Game.sprites.indexOf(playerShip), 1);
+    Game.ships.splice(Game.ships.indexOf(playerShip), 1);
+}
+
 COUCHFRIENDS.on('connect', function () {
     var jsonData = {
         topic: 'game',
@@ -1265,19 +1275,30 @@ COUCHFRIENDS.on('gameStart', function (data) {
 COUCHFRIENDS.on('playerJoined', function (data) {
     addPlayer(data.id);
 });
+
+/**
+ * Callback when a player connected to the game.
+ *
+ * @param {object} data list with the player information
+ * @param {int} data.id The unique identifier of the player
+ * @param {string} [data.name] The name of the player
+ */
+COUCHFRIENDS.on('playerLeft', function (data) {
+    removePlayer(data.id);
+});
 COUCHFRIENDS.on('playerClick', function (data) {
-    for (var i = 0; i < Game.ships[data.id].bullets.length; i++) {
-        if (!Game.ships[data.id].bullets[i].visible) {
+    for (var i = 0; i < Game.ships['player_' + data.id].bullets.length; i++) {
+        if (!Game.ships['player_' + data.id].bullets[i].visible) {
             SFX.laser();
-            var bullet = Game.ships[data.id].bullets[i];
-            var rad = ((Game.ships[data.id].rot - 90) * Math.PI) / 180;
+            var bullet = Game.ships['player_' + data.id].bullets[i];
+            var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
             var vectorx = Math.cos(rad);
             var vectory = Math.sin(rad);
             // move to the nose of the ship
-            bullet.x = Game.ships[data.id].x + vectorx * 4;
-            bullet.y = Game.ships[data.id].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships[data.id].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships[data.id].vel.y;
+            bullet.x = Game.ships['player_' + data.id].x + vectorx * 4;
+            bullet.y = Game.ships['player_' + data.id].y + vectory * 4;
+            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.id].vel.x;
+            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.id].vel.y;
             bullet.visible = true;
             break;
         }
@@ -1286,15 +1307,21 @@ COUCHFRIENDS.on('playerClick', function (data) {
 });
 COUCHFRIENDS.on('playerOrientation', function (data) {
 
-    Game.ships[data.id].vel.rot = data.x * 32;
-    var rad = ((Game.ships[data.id].rot - 90) * Math.PI) / 180;
-    Game.ships[data.id].acc.x = -(data.y) * Math.cos(rad);
-    Game.ships[data.id].acc.y = -(data.y) * Math.sin(rad);
-    Game.ships[data.id].children.exhaust.visible = Math.random() > 0.1;
+    Game.ships['player_' + data.id].vel.rot = data.x * 32;
+    var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
+    if (data.y > 0) {
+        // show down.
+        Game.ships['player_' + data.id].vel.x *= 0.95;
+        Game.ships['player_' + data.id].vel.y *= 0.95;
+        return;
+    }
+    Game.ships['player_' + data.id].acc.x = -(data.y) * Math.cos(rad);
+    Game.ships['player_' + data.id].acc.y = -(data.y) * Math.sin(rad);
+    Game.ships['player_' + data.id].children.exhaust.visible = Math.random() > 0.1;
 
-    if (Math.sqrt(Game.ships[data.id].vel.x * Game.ships[data.id].vel.x + Game.ships[data.id].vel.y * Game.ships[data.id].vel.y) > 8) {
-        Game.ships[data.id].vel.x *= 0.95;
-        Game.ships[data.id].vel.y *= 0.95;
+    if (Math.sqrt(Game.ships['player_' + data.id].vel.x * Game.ships['player_' + data.id].vel.x + Game.ships['player_' + data.id].vel.y * Game.ships['player_' + data.id].vel.y) > 8) {
+        Game.ships['player_' + data.id].vel.x *= 0.95;
+        Game.ships['player_' + data.id].vel.y *= 0.95;
     }
 
 });
