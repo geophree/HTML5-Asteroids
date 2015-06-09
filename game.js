@@ -75,7 +75,10 @@ Matrix = function (rows, columns) {
 };
 
 Sprite = function () {
-    this.init = function (name, points) {
+    this.init = function (name, points, color) {
+        if (color != null) {
+            this.color = color;
+        }
         this.name = name;
         this.points = points;
 
@@ -93,6 +96,7 @@ Sprite = function () {
     };
 
     this.children = {};
+    this.color = '#ffffff';
 
     this.visible = false;
     this.reap = false;
@@ -234,6 +238,7 @@ Sprite = function () {
         }
 
         this.context.beginPath();
+        this.context.strokeStyle = '#000000';
 
         this.context.moveTo(this.points[0], this.points[1]);
         for (var i = 1; i < this.points.length / 2; i++) {
@@ -244,6 +249,8 @@ Sprite = function () {
 
         this.context.closePath();
         this.context.stroke();
+        this.context.fillStyle=this.color;
+        this.context.fill();
     };
     this.findCollisionCanidates = function () {
         if (!this.visible || !this.currentNode) return [];
@@ -365,17 +372,19 @@ Sprite = function () {
 
 };
 
-Ship = function () {
+Ship = function (color) {
     this.init("ship",
-        [-5, 4,
-            0, -12,
-            5, 4]);
+        [-15, 4,
+            0, -32,
+            15, 4],
+    color);
 
     this.children.exhaust = new Sprite();
     this.children.exhaust.init("exhaust",
-        [-3, 6,
-            0, 11,
-            3, 6]);
+        [-4, 6,
+            0, 16,
+            4, 6],
+    '#ff9900');
 
     this.bulletCounter = 0;
 
@@ -1090,7 +1099,7 @@ $(function () {
     Game.bigAlien = bigAlien;
 
     var extraDude = new Ship();
-    extraDude.scale = 0.6;
+    extraDude.scale = 0.4;
     extraDude.visible = true;
     extraDude.preMove = null;
     extraDude.children = [];
@@ -1161,13 +1170,13 @@ $(function () {
 
         // score
         var score_text = '' + Game.score;
-        Text.renderText(score_text, 18, Game.canvasWidth - 14 * score_text.length, 20);
+        Text.renderText(score_text, 28, Game.canvasWidth - 26 * score_text.length, 30);
 
         // extra dudes
         for (i = 0; i < Game.lives; i++) {
             context.save();
-            extraDude.x = Game.canvasWidth - (8 * (i + 1));
-            extraDude.y = 32;
+            extraDude.x = Game.canvasWidth - (16 * (i + 1));
+            extraDude.y = 50;
             extraDude.configureTransform();
             extraDude.draw();
             context.restore();
@@ -1220,9 +1229,9 @@ $(function () {
 
 });
 
-function addPlayer(playerId) {
+function addPlayer(playerId, color) {
 
-    var ship = new Ship();
+    var ship = new Ship(color);
 
     ship.name = 'ship';
     ship.x = Game.canvasWidth / 2;
@@ -1273,8 +1282,22 @@ COUCHFRIENDS.on('gameStart', function (data) {
  * @param {string} [data.name] The name of the player
  */
 COUCHFRIENDS.on('playerJoined', function (data) {
-    addPlayer(data.id);
+    var color = randomColor();
+    addPlayer(data.id, color);
+    var jsonData = {
+        topic: 'player',
+        action: 'identify',
+        data: {
+            id: data.id,
+            color: color
+        }
+    };
+    COUCHFRIENDS.send(jsonData);
 });
+
+function randomColor() {
+    return '#'+Math.floor(Math.random()*16777215).toString(16);
+}
 
 /**
  * Callback when a player connected to the game.
@@ -1311,8 +1334,9 @@ COUCHFRIENDS.on('playerOrientation', function (data) {
     var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
     if (data.y > 0) {
         // show down.
-        Game.ships['player_' + data.id].vel.x *= 0.95;
-        Game.ships['player_' + data.id].vel.y *= 0.95;
+        Game.ships['player_' + data.id].vel.x *= 0.995;
+        Game.ships['player_' + data.id].vel.y *= 0.995;
+        Game.ships['player_' + data.id].children.exhaust.visible = false;
         return;
     }
     Game.ships['player_' + data.id].acc.x = -(data.y) * Math.cos(rad);
