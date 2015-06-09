@@ -1334,8 +1334,8 @@ COUCHFRIENDS.on('playerOrientation', function (data) {
     var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
     if (data.y > 0) {
         // show down.
-        Game.ships['player_' + data.id].vel.x *= 0.995;
-        Game.ships['player_' + data.id].vel.y *= 0.995;
+        Game.ships['player_' + data.id].vel.x *= 0.965;
+        Game.ships['player_' + data.id].vel.y *= 0.965;
         Game.ships['player_' + data.id].children.exhaust.visible = false;
         return;
     }
