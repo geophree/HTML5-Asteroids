@@ -379,6 +379,8 @@ Ship = function (color) {
             15, 4],
     color);
 
+    this.playerId = '';
+
     this.children.exhaust = new Sprite();
     this.children.exhaust.init("exhaust",
         [-4, 6,
@@ -393,65 +395,28 @@ Ship = function (color) {
     this.collidesWith = ["asteroid", "bigalien", "alienbullet"];
 
     this.preMove = function (delta) {
-        //if (KEY_STATUS.left) {
-        //  this.vel.rot = -6;
-        //} else if (KEY_STATUS.right) {
-        //  this.vel.rot = 6;
-        //} else {
-        //  this.vel.rot = 0;
-        //}
 
-        //if (KEY_STATUS.up) {
-        //  var rad = ((this.rot-90) * Math.PI)/180;
-        //  this.acc.x = 0.5 * Math.cos(rad);
-        //  this.acc.y = 0.5 * Math.sin(rad);
-        //  this.children.exhaust.visible = Math.random() > 0.1;
-        //} else {
-        //  this.acc.x = 0;
-        //  this.acc.y = 0;
-        //  this.children.exhaust.visible = false;
-        //}
-
-        //if (this.bulletCounter > 0) {
-        //    this.bulletCounter -= delta;
-        //}
-        //if (KEY_STATUS.space) {
-        //  if (this.bulletCounter <= 0) {
-        //    this.bulletCounter = 10;
-        //    for (var i = 0; i < this.bullets.length; i++) {
-        //      if (!this.bullets[i].visible) {
-        //        SFX.laser();
-        //        var bullet = this.bullets[i];
-        //        var rad = ((this.rot-90) * Math.PI)/180;
-        //        var vectorx = Math.cos(rad);
-        //        var vectory = Math.sin(rad);
-        //        // move to the nose of the ship
-        //        bullet.x = this.x + vectorx * 4;
-        //        bullet.y = this.y + vectory * 4;
-        //        bullet.vel.x = 6 * vectorx + this.vel.x;
-        //        bullet.vel.y = 6 * vectory + this.vel.y;
-        //        bullet.visible = true;
-        //        break;
-        //      }
-        //    }
-        //  }
-        //}
-
-        // limit the ship's speed
-        //if (Math.sqrt(this.vel.x * this.vel.x + this.vel.y * this.vel.y) > 8) {
-        //    this.vel.x *= 0.95;
-        //    this.vel.y *= 0.95;
-        //}
     };
 
     this.collision = function (other) {
         SFX.explosion();
         Game.explosionAt(other.x, other.y);
-        //Game.FSM.state = 'player_died';
+        Game.FSM.state = 'player_died';
         //this.visible = false;
         //this.currentNode.leave(this);
         //this.currentNode = null;
         Game.lives--;
+        if (this.playerId != '') {
+            var jsonData = {
+                topic: 'interface',
+                action: 'vibrate',
+                data: {
+                    playerId: this.playerId,
+                    duration: 250
+                }
+            };
+            COUCHFRIENDS.send(jsonData);
+        }
     };
 
 };
@@ -582,7 +547,10 @@ BigAlien = function () {
 BigAlien.prototype = new Sprite();
 
 Bullet = function () {
-    this.init("bullet", [0, 0]);
+
+    this.init("bullet",
+        [0, 0],
+        '#ff0000');
     this.time = 0;
     this.bridgesH = false;
     this.bridgesV = false;
@@ -596,7 +564,8 @@ Bullet = function () {
     this.draw = function () {
         if (this.visible) {
             this.context.save();
-            this.context.lineWidth = 2;
+            this.context.lineWidth = 8;
+            this.context.strokeStyle = this.color;
             this.context.beginPath();
             this.context.moveTo(this.x - 1, this.y - 1);
             this.context.lineTo(this.x + 1, this.y + 1);
@@ -610,7 +579,7 @@ Bullet = function () {
         if (this.visible) {
             this.time += delta;
         }
-        if (this.time > 50) {
+        if (this.time > 75) {
             this.visible = false;
             this.time = 0;
         }
@@ -630,11 +599,13 @@ Bullet.prototype = new Sprite();
 
 AlienBullet = function () {
     this.init("alienbullet");
+    this.color = '#ff0000';
 
     this.draw = function () {
         if (this.visible) {
             this.context.save();
-            this.context.lineWidth = 2;
+            this.context.lineWidth = 8;
+            this.context.strokeStyle = this.color;
             this.context.beginPath();
             this.context.moveTo(this.x, this.y);
             this.context.lineTo(this.x - this.vel.x, this.y - this.vel.y);
@@ -656,10 +627,11 @@ Asteroid = function () {
             5, -6,
             2, -10,
             -4, -10,
-            -4, -5]);
+            -4, -5],
+    '#cf8125');
 
     this.visible = true;
-    this.scale = 6;
+    this.scale = 12;
     this.postMove = this.wrapPostMove;
 
     this.collidesWith = ["ship", "bullet", "bigalien", "alienbullet"];
@@ -667,8 +639,8 @@ Asteroid = function () {
     this.collision = function (other) {
         SFX.explosion();
         if (other.name == "bullet") Game.score += 120 / this.scale;
-        this.scale /= 3;
-        if (this.scale > 0.5) {
+        this.scale /= 2;
+        if (this.scale > 1.5) {
             // break into fragments
             for (var i = 0; i < 3; i++) {
                 var roid = $.extend(true, {}, this);
@@ -678,7 +650,7 @@ Asteroid = function () {
                     roid.points.reverse();
                 }
                 roid.vel.rot = Math.random() * 2 - 1;
-                roid.move(roid.scale * 3); // give them a little push
+                roid.move(roid.scale * 6); // give them a little push
                 Game.sprites.push(roid);
             }
         }
@@ -706,6 +678,7 @@ Explosion = function () {
         if (this.visible) {
             this.context.save();
             this.context.lineWidth = 1.0 / this.scale;
+            this.context.strokeStyle = '#ff0000';
             this.context.beginPath();
             for (var i = 0; i < 5; i++) {
                 var line = this.lines[i];
@@ -834,6 +807,7 @@ Text = {
         var pixels = size * 72 / (this.face.resolution * 100);
         this.context.scale(pixels, -1 * pixels);
         this.context.beginPath();
+        this.context.fillStyle = '#ffffff';
         var chars = text.split('');
         var charsLength = chars.length;
         for (var i = 0; i < charsLength; i++) {
@@ -924,7 +898,7 @@ var Game = {
 
     FSM: {
         boot: function () {
-            Game.spawnAsteroids(5);
+            Game.spawnAsteroids(Math.round(Game.canvasWidth / 250));
             this.state = 'start';
         },
         waiting: function () {
@@ -947,7 +921,7 @@ var Game = {
             }
 
             Game.score = 0;
-            Game.lives = 10;
+            Game.lives = 5;
             Game.totalAsteroids = 2;
             Game.spawnAsteroids();
 
@@ -998,17 +972,9 @@ var Game = {
             }
         },
         player_died: function () {
-            if (Game.lives < 0 && 1 == 2) {
-                this.state = 'end_game';
-            } else {
-                if (this.timer == null) {
-                    this.timer = Date.now();
-                }
-                // wait a second before spawning
-                if (Date.now() - this.timer > 1000) {
-                    this.timer = null;
-                    //this.state = 'spawn_ship';
-                }
+            if (Game.lives < 0) {
+                Game.score = 0;
+                Game.lives = 5;
             }
         },
         end_game: function () {
@@ -1136,6 +1102,8 @@ $(function () {
     var mainLoop = function () {
         context.clearRect(0, 0, Game.canvasWidth, Game.canvasHeight);
 
+// Make sure the image is loaded first otherwise nothing will draw.
+
         Game.FSM.execute();
 
         if (KEY_STATUS.g) {
@@ -1234,11 +1202,12 @@ function addPlayer(playerId, color) {
     var ship = new Ship(color);
 
     ship.name = 'ship';
+    ship.playerId = playerId;
     ship.x = Game.canvasWidth / 2;
     ship.y = Game.canvasHeight / 2;
 
     ship.bullets = [];
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < 15; i++) {
         var bull = new Bullet();
         ship.bullets.push(bull);
         Game.sprites.push(bull);
@@ -1271,7 +1240,6 @@ COUCHFRIENDS.on('connect', function () {
 });
 
 COUCHFRIENDS.on('gameStart', function (data) {
-    $('#info').html("Join the game with your phone at www.couchfriends.com with code: " + data.code);
 });
 
 /**
