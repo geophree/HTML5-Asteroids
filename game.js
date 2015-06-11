@@ -231,14 +231,14 @@ Sprite = function () {
     this.draw = function () {
         if (!this.visible) return;
 
-        this.context.lineWidth = 1.0 / this.scale;
+        this.context.lineWidth = 3.0 / this.scale;
 
         for (child in this.children) {
             this.children[child].draw();
         }
 
         this.context.beginPath();
-        this.context.strokeStyle = '#000000';
+        this.context.strokeStyle = '#ffffff';
 
         this.context.moveTo(this.points[0], this.points[1]);
         for (var i = 1; i < this.points.length / 2; i++) {
@@ -249,7 +249,7 @@ Sprite = function () {
 
         this.context.closePath();
         this.context.stroke();
-        this.context.fillStyle=this.color;
+        this.context.fillStyle = this.color;
         this.context.fill();
     };
     this.findCollisionCanidates = function () {
@@ -377,7 +377,7 @@ Ship = function (color) {
         [-15, 4,
             0, -32,
             15, 4],
-    color);
+        color);
 
     this.playerId = '';
 
@@ -386,7 +386,7 @@ Ship = function (color) {
         [-4, 6,
             0, 16,
             4, 6],
-    '#ff9900');
+        '#ff9900');
 
     this.bulletCounter = 0;
 
@@ -399,7 +399,7 @@ Ship = function (color) {
     };
 
     this.collision = function (other) {
-        SFX.explosion();
+        SFX['explosion'].play();
         Game.explosionAt(other.x, other.y);
         Game.FSM.state = 'player_died';
         //this.visible = false;
@@ -431,7 +431,10 @@ BigAlien = function () {
             12, 4,
             -12, 4,
             -20, 0,
-            20, 0]);
+            20, 0],
+    '#0abbcb');
+
+    this.scale = 3;
 
     this.children.top = new Sprite();
     this.children.top.init("bigalien_top",
@@ -470,7 +473,7 @@ BigAlien = function () {
     this.setup = function () {
         this.newPosition();
 
-        for (var i = 0; i < 3; i++) {
+        for (var i = 0; i < 6; i++) {
             var bull = new AlienBullet();
             this.bullets.push(bull);
             Game.sprites.push(bull);
@@ -513,7 +516,7 @@ BigAlien = function () {
                     bullet.vel.x = 6 * vectorx;
                     bullet.vel.y = 6 * vectory;
                     bullet.visible = true;
-                    SFX.laser();
+                    SFX['laser'].play();
                     break;
                 }
             }
@@ -523,7 +526,7 @@ BigAlien = function () {
 
     BigAlien.prototype.collision = function (other) {
         if (other.name == "bullet") Game.score += 200;
-        SFX.explosion();
+        SFX['explosion'].play();
         Game.explosionAt(other.x, other.y);
         this.visible = false;
         this.newPosition();
@@ -628,7 +631,7 @@ Asteroid = function () {
             2, -10,
             -4, -10,
             -4, -5],
-    '#cf8125');
+        '#cf8125');
 
     this.visible = true;
     this.scale = 12;
@@ -637,12 +640,14 @@ Asteroid = function () {
     this.collidesWith = ["ship", "bullet", "bigalien", "alienbullet"];
 
     this.collision = function (other) {
-        SFX.explosion();
+        SFX['explosion'].play();
         if (other.name == "bullet") Game.score += 120 / this.scale;
+        var breakDown = Math.floor(Game.score / 1500);
+        breakDown += 3;
         this.scale /= 2;
         if (this.scale > 1.5) {
             // break into fragments
-            for (var i = 0; i < 3; i++) {
+            for (var i = 0; i < breakDown; i++) {
                 var roid = $.extend(true, {}, this);
                 roid.vel.x = Math.random() * 6 - 3;
                 roid.vel.y = Math.random() * 6 - 3;
@@ -822,35 +827,71 @@ Text = {
     face: null
 };
 
-SFX = {
-    laser: new Audio('39459__THE_bizniss__laser.wav'),
-    explosion: new Audio('51467__smcameron__missile_explosion.wav')
-};
+window.AudioContext = window.AudioContext || window.webkitAudioContext || false;
 
-// preload audio
-for (var sfx in SFX) {
-    (function () {
-        var audio = SFX[sfx];
-        audio.muted = true;
-        audio.play();
-
-        SFX[sfx] = function () {
-            if (!this.muted) {
-                if (audio.duration == 0) {
-                    // somehow dropped out
-                    audio.load();
-                    audio.play();
-                } else {
-                    audio.muted = false;
-                    audio.currentTime = 0;
-                }
-            }
-            return audio;
+var SFXObjects = [
+    {
+        name: 'laser',
+        file: '39459__THE_bizniss__laser.wav',
+        play: function () {
         }
-    })();
+    },
+    {
+        name: 'explosion',
+        file: '51467__smcameron__missile_explosion.wav',
+        play: function () {
+        }
+    }
+];
+
+var SFX = {};
+
+function ajax(url, callback, data, responseType) {
+    var x;
+    if (responseType == null) {
+        responseType = 'text';
+    }
+    try {
+        x = new (this.XMLHttpRequest || ActiveXObject)('MSXML2.XMLHTTP.3.0');
+        x.open(data ? 'POST' : 'GET', url, 1);
+        x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        x.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        x.responseType = responseType;
+        x.onreadystatechange = function () {
+            if (x.readyState == 4 && (x.status == 200 || x.status == 0)) {
+                callback(x.response, x);
+            }
+        };
+        x.send(data)
+    } catch (e) {
+        window.console && console.log(e);
+    }
+};
+// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/rhythm-sample.js
+var context = false;
+if (typeof AudioContext == 'function') {
+    context = new AudioContext();
 }
-// pre-mute audio
-SFX.muted = true;
+if (context) {
+    SFXObjects.forEach(function (SFXObject, sound) {
+        if (SFXObject.file != null) {
+            // load file
+            ajax(SFXObject.file, function (data) {
+                SFX[SFXObject.name] = {};
+                context.decodeAudioData(data, function (buffer) {
+                    SFX[SFXObject.name].play = function () {
+                        var source = context.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(context.destination);
+                        if (!source.start)
+                            source.start = source.noteOn;
+                        source.start(0);
+                    };
+                });
+            }, '', 'arraybuffer');
+        }
+    });
+}
 
 var Game = {
     score: 0,
@@ -976,6 +1017,7 @@ var Game = {
                 Game.score = 0;
                 Game.lives = 5;
             }
+            this.state = 'run';
         },
         end_game: function () {
             Text.renderText('GAME OVER', 50, Game.canvasWidth / 2 - 160, Game.canvasHeight / 2 + 10);
@@ -1137,7 +1179,7 @@ $(function () {
         }
 
         // score
-        var score_text = '' + Game.score;
+        var score_text = '' + Math.round(Game.score);
         Text.renderText(score_text, 28, Game.canvasWidth - 26 * score_text.length, 30);
 
         // extra dudes
@@ -1264,7 +1306,12 @@ COUCHFRIENDS.on('playerJoined', function (data) {
 });
 
 function randomColor() {
-    return '#'+Math.floor(Math.random()*16777215).toString(16);
+    var letters = '0123456789ABCDEF'.split('');
+    var color = '#';
+    for (var i = 0; i < 6; i++ ) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
 }
 
 /**
@@ -1280,7 +1327,7 @@ COUCHFRIENDS.on('playerLeft', function (data) {
 COUCHFRIENDS.on('playerClick', function (data) {
     for (var i = 0; i < Game.ships['player_' + data.id].bullets.length; i++) {
         if (!Game.ships['player_' + data.id].bullets[i].visible) {
-            SFX.laser();
+            SFX['laser'].play();
             var bullet = Game.ships['player_' + data.id].bullets[i];
             var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
             var vectorx = Math.cos(rad);
