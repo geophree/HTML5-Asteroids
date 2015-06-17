@@ -963,6 +963,7 @@ var Game = {
 
             Game.score = 0;
             Game.lives = 5;
+            Game.firstHighscore = true;
             Game.totalAsteroids = 2;
             Game.spawnAsteroids();
 
@@ -1016,6 +1017,7 @@ var Game = {
             if (Game.lives < 0) {
                 Game.score = 0;
                 Game.lives = 5;
+                Game.firstHighscore = true;
             }
             this.state = 'run';
         },
@@ -1056,6 +1058,7 @@ $(function () {
     canvas.attr('height', height);
     Game.canvasWidth = canvas.width();
     Game.canvasHeight = canvas.height();
+    Game.firstHighscore = true;
 
     var context = canvas[0].getContext("2d");
 
@@ -1179,6 +1182,10 @@ $(function () {
         }
 
         // score
+        if (Game.firstHighscore == true && Math.round(Game.score) > 9000) {
+            unlockAchievement();
+            Game.firstHighscore = false;
+        }
         var score_text = '' + Math.round(Game.score);
         Text.renderText(score_text, 28, Game.canvasWidth - 26 * score_text.length, 30);
 
@@ -1232,8 +1239,8 @@ $(function () {
         }
     });
 
-    COUCHFRIENDS.settings.apiKey = 'abcdef';
-    COUCHFRIENDS.settings.host = '93.157.6.81';
+    COUCHFRIENDS.settings.apiKey = 'asteroids-1234';
+    COUCHFRIENDS.settings.host = 'ws.couchfriends.com';
     COUCHFRIENDS.settings.port = '1234';
     COUCHFRIENDS.connect();
 
@@ -1272,11 +1279,29 @@ function removePlayer(playerId) {
     Game.ships.splice(Game.ships.indexOf(playerShip), 1);
 }
 
+function unlockAchievement() {
+    for (var playerKey in Game.ships) {
+        if (Game.ships.hasOwnProperty(playerKey)) {
+            var jsonData = {
+                topic: 'game',
+                action: 'achievementUnlock',
+                data: {
+                    playerId: Game.ships[playerKey].playerId,
+                    key: '9001'
+                }
+            };
+            COUCHFRIENDS.send(jsonData);
+        }
+    }
+}
+
 COUCHFRIENDS.on('connect', function () {
     var jsonData = {
         topic: 'game',
         action: 'host',
-        data: {}
+        data: {
+            sessionKey: 'asteroids-1234'
+        }
     };
     COUCHFRIENDS.send(jsonData);
 });
