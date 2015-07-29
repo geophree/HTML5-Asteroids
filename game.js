@@ -1241,7 +1241,7 @@ $(function () {
 
     COUCHFRIENDS.settings.apiKey = 'asteroids-1234';
     COUCHFRIENDS.settings.host = 'ws.couchfriends.com';
-    COUCHFRIENDS.settings.port = '1234';
+    COUCHFRIENDS.settings.port = '80';
     COUCHFRIENDS.connect();
 
 });
