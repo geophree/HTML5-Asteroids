@@ -1378,19 +1378,38 @@ COUCHFRIENDS.on('buttonClick', function (data) {
         }
     }
 });
-COUCHFRIENDS.on('playerClickUp', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.id].bullets.length; i++) {
-        if (!Game.ships['player_' + data.id].bullets[i].visible) {
+
+COUCHFRIENDS.on('buttonUp', function (data) {
+    for (var i = 0; i < Game.ships['player_' + data.playerId].bullets.length; i++) {
+        if (!Game.ships['player_' + data.playerId].bullets[i].visible) {
             SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.id].bullets[i];
-            var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
+            var bullet = Game.ships['player_' + data.playerId].bullets[i];
+            var rad = ((Game.ships['player_' + data.playerId].rot - 90) * Math.PI) / 180;
             var vectorx = Math.cos(rad);
             var vectory = Math.sin(rad);
             // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.id].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.id].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.id].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.id].vel.y;
+            bullet.x = Game.ships['player_' + data.playerId].x + vectorx * 4;
+            bullet.y = Game.ships['player_' + data.playerId].y + vectory * 4;
+            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.playerId].vel.x;
+            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.playerId].vel.y;
+            bullet.visible = true;
+            break;
+        }
+    }
+});
+COUCHFRIENDS.on('playerClickUp', function (data) {
+    for (var i = 0; i < Game.ships['player_' + data.playerId].bullets.length; i++) {
+        if (!Game.ships['player_' + data.playerId].bullets[i].visible) {
+            SFX['laser'].play();
+            var bullet = Game.ships['player_' + data.playerId].bullets[i];
+            var rad = ((Game.ships['player_' + data.playerId].rot - 90) * Math.PI) / 180;
+            var vectorx = Math.cos(rad);
+            var vectory = Math.sin(rad);
+            // move to the nose of the ship
+            bullet.x = Game.ships['player_' + data.playerId].x + vectorx * 4;
+            bullet.y = Game.ships['player_' + data.playerId].y + vectory * 4;
+            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.playerId].vel.x;
+            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.playerId].vel.y;
             bullet.visible = true;
             break;
         }
