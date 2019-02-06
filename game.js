@@ -1316,12 +1316,14 @@ COUCHFRIENDS.on('gameStart', function (data) {
  * @param {int} data.id The unique identifier of the player
  * @param {string} [data.name] The name of the player
  */
-COUCHFRIENDS.on('playerJoined', function (data) {
+COUCHFRIENDS.on('player.join', function (data) {
     var color = randomColor();
     addPlayer(data.id, color);
     var jsonData = {
+        id: data.id,
         topic: 'player',
         action: 'identify',
+        type: 'player.identify',
         data: {
             id: data.id,
             color: color
@@ -1330,8 +1332,10 @@ COUCHFRIENDS.on('playerJoined', function (data) {
     COUCHFRIENDS.send(jsonData);
 
     var jsonData = {
+        id: data.id,
         topic: 'interface',
         action: 'buttonAdd',
+        type: 'interface.buttonAdd',
         data: {
             playerId: data.id,
             color: '#ff0000',
@@ -1357,82 +1361,81 @@ function randomColor() {
  * @param {int} data.id The unique identifier of the player
  * @param {string} [data.name] The name of the player
  */
-COUCHFRIENDS.on('playerLeft', function (data) {
+COUCHFRIENDS.on('player.left', function (data) {
     removePlayer(data.id);
 });
-COUCHFRIENDS.on('buttonClick', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.playerId].bullets.length; i++) {
-        if (!Game.ships['player_' + data.playerId].bullets[i].visible) {
+COUCHFRIENDS.on('player.buttonClick', function (data) {
+    for (var i = 0; i < Game.ships['player_' + data.player.id].bullets.length; i++) {
+        if (!Game.ships['player_' + data.player.id].bullets[i].visible) {
             SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.playerId].bullets[i];
-            var rad = ((Game.ships['player_' + data.playerId].rot - 90) * Math.PI) / 180;
+            var bullet = Game.ships['player_' + data.player.id].bullets[i];
+            var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
             var vectorx = Math.cos(rad);
             var vectory = Math.sin(rad);
             // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.playerId].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.playerId].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.playerId].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.playerId].vel.y;
+            bullet.x = Game.ships['player_' + data.player.id].x + vectorx * 4;
+            bullet.y = Game.ships['player_' + data.player.id].y + vectory * 4;
+            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.player.id].vel.x;
+            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.player.id].vel.y;
             bullet.visible = true;
             break;
         }
     }
 });
 
-COUCHFRIENDS.on('buttonUp', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.playerId].bullets.length; i++) {
-        if (!Game.ships['player_' + data.playerId].bullets[i].visible) {
+COUCHFRIENDS.on('player.buttonUp', function (data) {
+    for (var i = 0; i < Game.ships['player_' + data.player.id].bullets.length; i++) {
+        if (!Game.ships['player_' + data.player.id].bullets[i].visible) {
             SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.playerId].bullets[i];
-            var rad = ((Game.ships['player_' + data.playerId].rot - 90) * Math.PI) / 180;
+            var bullet = Game.ships['player_' + data.player.id].bullets[i];
+            var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
             var vectorx = Math.cos(rad);
             var vectory = Math.sin(rad);
             // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.playerId].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.playerId].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.playerId].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.playerId].vel.y;
+            bullet.x = Game.ships['player_' + data.player.id].x + vectorx * 4;
+            bullet.y = Game.ships['player_' + data.player.id].y + vectory * 4;
+            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.player.id].vel.x;
+            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.player.id].vel.y;
             bullet.visible = true;
             break;
         }
     }
 });
-COUCHFRIENDS.on('playerClickUp', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.playerId].bullets.length; i++) {
-        if (!Game.ships['player_' + data.playerId].bullets[i].visible) {
+COUCHFRIENDS.on('player.clickUp', function (data) {
+    for (var i = 0; i < Game.ships['player_' + data.player.id].bullets.length; i++) {
+        if (!Game.ships['player_' + data.player.id].bullets[i].visible) {
             SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.playerId].bullets[i];
-            var rad = ((Game.ships['player_' + data.playerId].rot - 90) * Math.PI) / 180;
+            var bullet = Game.ships['player_' + data.player.id].bullets[i];
+            var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
             var vectorx = Math.cos(rad);
             var vectory = Math.sin(rad);
             // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.playerId].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.playerId].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.playerId].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.playerId].vel.y;
+            bullet.x = Game.ships['player_' + data.player.id].x + vectorx * 4;
+            bullet.y = Game.ships['player_' + data.player.id].y + vectory * 4;
+            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.player.id].vel.x;
+            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.player.id].vel.y;
             bullet.visible = true;
             break;
         }
     }
 });
-COUCHFRIENDS.on('playerOrientation', function (data) {
-
-    Game.ships['player_' + data.id].vel.rot = data.x * 22;
-    var rad = ((Game.ships['player_' + data.id].rot - 90) * Math.PI) / 180;
+COUCHFRIENDS.on('player.orientation', function (data) {
+    Game.ships['player_' + data.player.id].vel.rot = data.x * 22;
+    var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
     if (data.y > 0) {
         // show down.
-        Game.ships['player_' + data.id].vel.x *= 0.965;
-        Game.ships['player_' + data.id].vel.y *= 0.965;
-        Game.ships['player_' + data.id].children.exhaust.visible = false;
+        Game.ships['player_' + data.player.id].vel.x *= 0.965;
+        Game.ships['player_' + data.player.id].vel.y *= 0.965;
+        Game.ships['player_' + data.player.id].children.exhaust.visible = false;
         return;
     }
-    Game.ships['player_' + data.id].acc.x = -(data.y) * Math.cos(rad);
-    Game.ships['player_' + data.id].acc.y = -(data.y) * Math.sin(rad);
-    Game.ships['player_' + data.id].children.exhaust.visible = Math.random() > 0.1;
+    Game.ships['player_' + data.player.id].acc.x = -(data.y) * Math.cos(rad);
+    Game.ships['player_' + data.player.id].acc.y = -(data.y) * Math.sin(rad);
+    Game.ships['player_' + data.player.id].children.exhaust.visible = Math.random() > 0.1;
 
-    if (Math.sqrt(Game.ships['player_' + data.id].vel.x * Game.ships['player_' + data.id].vel.x + Game.ships['player_' + data.id].vel.y * Game.ships['player_' + data.id].vel.y) > 8) {
-        Game.ships['player_' + data.id].vel.x *= 0.95;
-        Game.ships['player_' + data.id].vel.y *= 0.95;
+    if (Math.sqrt(Game.ships['player_' + data.player.id].vel.x * Game.ships['player_' + data.player.id].vel.x + Game.ships['player_' + data.player.id].vel.y * Game.ships['player_' + data.player.id].vel.y) > 8) {
+        Game.ships['player_' + data.player.id].vel.x *= 0.95;
+        Game.ships['player_' + data.player.id].vel.y *= 0.95;
     }
 
 });
