@@ -359,6 +359,8 @@ Ship = function (color) {
 
     this.bulletCounter = 0;
 
+    this.didShot = false;
+
     this.postMove = this.wrapPostMove;
 
     this.collidesWith = ["asteroid", "bigalien", "alienbullet"];
@@ -371,21 +373,11 @@ Ship = function (color) {
         SFX['explosion'].play();
         Game.explosionAt(other.x, other.y);
         Game.FSM.state = 'player_died';
-        //this.visible = false;
-        //this.currentNode.leave(this);
-        //this.currentNode = null;
-        Game.lives--;
-        if (this.playerId != '') {
-            var jsonData = {
-                topic: 'interface',
-                action: 'vibrate',
-                data: {
-                    playerId: this.playerId,
-                    duration: 250
-                }
-            };
-            COUCHFRIENDS.send(jsonData);
-        }
+        // this.visible = false;
+        // this.currentNode.leave(this);
+        // this.currentNode = null;
+        // Game.lives--;
+        // do vibration?
     };
 
 };
@@ -946,7 +938,6 @@ var Game = {
 
             Game.score = 0;
             Game.lives = 5;
-            Game.firstHighscore = true;
             Game.totalAsteroids = 2;
             Game.spawnAsteroids();
 
@@ -997,11 +988,8 @@ var Game = {
             }
         },
         player_died: function () {
-            if (Game.lives < 0) {
-                Game.score = 0;
-                Game.lives = 5;
-                Game.firstHighscore = true;
-            }
+            Game.score -= 100;
+            if (Game.score < 0) Game.score = 0;
             this.state = 'run';
         },
         end_game: function () {
@@ -1034,7 +1022,6 @@ function init() {
     canvas.height = canvas.clientHeight;
     Game.canvasWidth = canvas.width;
     Game.canvasHeight = canvas.height;
-    Game.firstHighscore = true;
 
     var context = canvas.getContext("2d");
 
@@ -1118,8 +1105,21 @@ function init() {
     var mainLoop = function () {
         context.clearRect(0, 0, Game.canvasWidth, Game.canvasHeight);
 
-    // Make sure the image is loaded first otherwise nothing will draw.
+        const deadZone = (axis) =>
+            Math.sign(axis) * Math.max(Math.abs(axis) - .1, 0) / .9;
+        for (const con of navigator.getGamepads()) {
+            if (!con?.connected) continue;
+            const playerId = con.index;
+            const ship = Game.ships['player_' + playerId];
+            if (!ship || ship.name === 'ship-dead') continue;
+            if (!ship.didShot && con.buttons[0].pressed) shoot(playerId);
+            ship.didShot = con.buttons[0].pressed;
+            accel = -deadZone(con.axes[1]);
+            rot = deadZone(con.axes[0]) / 5;
+            updateMotion(playerId, rot, accel);
+        }
 
+        // Make sure the image is loaded first otherwise nothing will draw.
         Game.FSM.execute();
 
         if (KEY_STATUS.g) {
@@ -1154,22 +1154,18 @@ function init() {
         }
 
         // score
-        if (Game.firstHighscore == true && Math.round(Game.score) > 9000) {
-            unlockAchievement();
-            Game.firstHighscore = false;
-        }
         var score_text = '' + Math.round(Game.score);
         Text.renderText(score_text, 28, Game.canvasWidth - 26 * score_text.length, 30);
 
         // extra dudes
-        for (i = 0; i < Game.lives; i++) {
-            context.save();
-            extraDude.x = Game.canvasWidth - (16 * (i + 1));
-            extraDude.y = 50;
-            extraDude.configureTransform();
-            extraDude.draw();
-            context.restore();
-        }
+        // for (i = 0; i < Game.lives; i++) {
+        //     context.save();
+        //     extraDude.x = Game.canvasWidth - (16 * (i + 1));
+        //     extraDude.y = 50;
+        //     extraDude.configureTransform();
+        //     extraDude.draw();
+        //     context.restore();
+        // }
 
         if (showFramerate) {
             Text.renderText('' + avgFramerate, 24, Game.canvasWidth - 38, Game.canvasHeight - 2);
@@ -1211,29 +1207,13 @@ function init() {
         }
     });
 
-    COUCHFRIENDS = new EventTarget();
-    COUCHFRIENDS.settings = {};
-    COUCHFRIENDS.on = (eventName, cb) => {
-      COUCHFRIENDS.addEventListener(eventName, cb);
-    };
-    COUCHFRIENDS.connect = () => {};
-    COUCHFRIENDS.send = () => {};
-
-    COUCHFRIENDS.settings.apiKey = 'asteroids-1234';
-    COUCHFRIENDS.settings.host = 'ws.couchfriends.com';
-    COUCHFRIENDS.settings.port = '80';
-    COUCHFRIENDS.connect();
-
     window.addEventListener('gamepadconnected', ({ gamepad }) => {
-      const e = new Event('player.join');
-      e.id = gamepad.index;
-      COUCHFRIENDS.dispatchEvent(e);
+      var color = randomColor();
+      addPlayer(gamepad.index, color);
     });
 
     window.addEventListener('gamepaddisconnected', ({ gamepad }) => {
-      const e = new Event('player.left');
-      e.id = gamepad.index;
-      COUCHFRIENDS.dispatchEvent(e);
+      removePlayer(gamepad.index);
     });
 }
 
@@ -1272,73 +1252,6 @@ function removePlayer(playerId) {
     Game.ships.splice(Game.ships.indexOf(playerShip), 1);
 }
 
-function unlockAchievement() {
-    return;
-    for (var playerKey in Game.ships) {
-        if (Game.ships.hasOwnProperty(playerKey)) {
-            var jsonData = {
-                topic: 'game',
-                action: 'achievementUnlock',
-                data: {
-                    playerId: Game.ships[playerKey].playerId,
-                    key: '9001'
-                }
-            };
-            COUCHFRIENDS.send(jsonData);
-        }
-    }
-}
-
-COUCHFRIENDS.on('connect', function () {
-    var jsonData = {
-        topic: 'game',
-        action: 'host',
-        data: {
-            sessionKey: 'asteroids-1234'
-        }
-    };
-    COUCHFRIENDS.send(jsonData);
-});
-
-COUCHFRIENDS.on('gameStart', function (data) {
-});
-
-/**
- * Callback when a player connected to the game.
- *
- * @param {object} data list with the player information
- * @param {int} data.id The unique identifier of the player
- * @param {string} [data.name] The name of the player
- */
-COUCHFRIENDS.on('player.join', function (data) {
-    var color = randomColor();
-    addPlayer(data.id, color);
-    var jsonData = {
-        id: data.id,
-        topic: 'player',
-        action: 'identify',
-        type: 'player.identify',
-        data: {
-            id: data.id,
-            color: color
-        }
-    };
-    COUCHFRIENDS.send(jsonData);
-
-    var jsonData = {
-        id: data.id,
-        topic: 'interface',
-        action: 'buttonAdd',
-        type: 'interface.buttonAdd',
-        data: {
-            playerId: data.id,
-            color: '#ff0000',
-            id: 'buttonShoot'
-        }
-    };
-    COUCHFRIENDS.send(jsonData);
-});
-
 function randomColor() {
     var letters = '0123456789ABCDEF'.split('');
     var color = '#';
@@ -1348,19 +1261,8 @@ function randomColor() {
     return color;
 }
 
-/**
- * Callback when a player connected to the game.
- *
- * @param {object} data list with the player information
- * @param {int} data.id The unique identifier of the player
- * @param {string} [data.name] The name of the player
- */
-COUCHFRIENDS.on('player.left', function (data) {
-    removePlayer(data.id);
-});
-
-function shoot(data) {
-    const ship = Game.ships['player_' + data.player.id];
+function shoot(playerId) {
+    const ship = Game.ships['player_' + playerId];
     for (const bullet of ship.bullets) {
         if (bullet.visible) continue;
         SFX['laser'].play();
@@ -1370,33 +1272,37 @@ function shoot(data) {
         // move to the nose of the ship
         bullet.x = ship.x + vectorx * 4;
         bullet.y = ship.y + vectory * 4;
-        bullet.vel.x = 6 * vectorx + ship.vel.x;
-        bullet.vel.y = 6 * vectory + ship.vel.y;
+        bullet.vel.x = 12 * vectorx + ship.vel.x;
+        bullet.vel.y = 12 * vectory + ship.vel.y;
         bullet.visible = true;
         break;
     }
 }
-COUCHFRIENDS.on('player.buttonClick', shoot);
-COUCHFRIENDS.on('player.buttonUp', shoot);
-COUCHFRIENDS.on('player.clickUp', shoot);
-COUCHFRIENDS.on('player.orientation', function (data) {
-    const ship = ship;
-    ship.vel.rot = data.x * 22;
+
+function updateMotion(playerId, rotation, accel) {
+    const ship = Game.ships['player_' + playerId];
+    ship.vel.rot = rotation * 22;
     var rad = ((ship.rot - 90) * Math.PI) / 180;
-    if (data.y > 0) {
-        // slow down.
-        ship.vel.x *= 0.965;
-        ship.vel.y *= 0.965;
+    if (accel < 0) {
+        ship.acc.x = 0;
+        ship.acc.y = 0;
+    //     // slow down.
+    //     ship.acc.x = -.1 * Math.cos(rad);
+    //     ship.acc.y = -.1 * Math.sin(rad);
         ship.children.exhaust.visible = false;
         return;
     }
-    ship.acc.x = -(data.y) * Math.cos(rad);
-    ship.acc.y = -(data.y) * Math.sin(rad);
+
     ship.children.exhaust.visible = Math.random() > 0.1;
 
-    if (Math.sqrt(ship.vel.y) > 8) {
-        ship.vel.x *= 0.95;
-        ship.vel.y *= 0.95;
+    accelX = accel * Math.cos(rad);
+    accelY = accel * Math.sin(rad);
+
+    if (ship.vel.x ** 2 + ship.vel.y ** 2 > 32 ** 2) {
+        if (Math.sign(accelX) === Math.sign(ship.vel.x)) accelX = 0;
+        if (Math.sign(accelY) === Math.sign(ship.vel.y)) accelY = 0;
     }
 
-});
+    ship.acc.x = accelX;
+    ship.acc.y = accelY;
+}
