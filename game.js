@@ -21,13 +21,14 @@ for (code in KEY_CODES) {
     KEY_STATUS[KEY_CODES[code]] = false;
 }
 
-$(window).keydown(function (e) {
+window.addEventListener("keydown", (e) => {
     KEY_STATUS.keyDown = true;
     if (KEY_CODES[e.keyCode]) {
         e.preventDefault();
         KEY_STATUS[KEY_CODES[e.keyCode]] = true;
     }
-}).keyup(function (e) {
+});
+window.addEventListener("keyup", (e) => {
     KEY_STATUS.keyDown = false;
     if (KEY_CODES[e.keyCode]) {
         e.preventDefault();
@@ -117,39 +118,31 @@ Sprite = function () {
     this.postMove = null;
 
     this.run = function (delta) {
-
         this.move(delta);
         this.updateGrid();
-
-        this.context.save();
-        this.configureTransform();
-        this.draw();
 
         var canidates = this.findCollisionCanidates();
 
         this.matrix.configure(this.rot, this.scale, this.x, this.y);
-        this.checkCollisionsAgainst(canidates);
-
-        this.context.restore();
+        const _draw = () => {
+          this.context.save();
+          this.configureTransform();
+          this.draw();
+          this.checkCollisionsAgainst(canidates);
+          this.context.restore();
+        };
+        _draw();
 
         if (this.bridgesH && this.currentNode && this.currentNode.dupe.horizontal) {
             this.x += this.currentNode.dupe.horizontal;
-            this.context.save();
-            this.configureTransform();
-            this.draw();
-            this.checkCollisionsAgainst(canidates);
-            this.context.restore();
+            _draw();
             if (this.currentNode) {
                 this.x -= this.currentNode.dupe.horizontal;
             }
         }
         if (this.bridgesV && this.currentNode && this.currentNode.dupe.vertical) {
             this.y += this.currentNode.dupe.vertical;
-            this.context.save();
-            this.configureTransform();
-            this.draw();
-            this.checkCollisionsAgainst(canidates);
-            this.context.restore();
+            _draw();
             if (this.currentNode) {
                 this.y -= this.currentNode.dupe.vertical;
             }
@@ -160,11 +153,7 @@ Sprite = function () {
             this.currentNode.dupe.horizontal) {
             this.x += this.currentNode.dupe.horizontal;
             this.y += this.currentNode.dupe.vertical;
-            this.context.save();
-            this.configureTransform();
-            this.draw();
-            this.checkCollisionsAgainst(canidates);
-            this.context.restore();
+            _draw();
             if (this.currentNode) {
                 this.x -= this.currentNode.dupe.horizontal;
                 this.y -= this.currentNode.dupe.vertical;
@@ -175,7 +164,7 @@ Sprite = function () {
         if (!this.visible) return;
         this.transPoints = null; // clear cached points
 
-        if ($.isFunction(this.preMove)) {
+        if (this.preMove) {
             this.preMove(delta);
         }
 
@@ -190,7 +179,7 @@ Sprite = function () {
             this.rot += 360;
         }
 
-        if ($.isFunction(this.postMove)) {
+        if (this.postMove) {
             this.postMove(delta);
         }
     };
@@ -215,7 +204,7 @@ Sprite = function () {
             this.context.lineWidth = 3.0;
             this.context.strokeStyle = 'green';
             this.context.strokeRect(gridx * GRID_SIZE + 2, gridy * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
-            this.context.strokeStyle = 'black';
+            this.context.strokeStyle = 'white';
             this.context.lineWidth = 1.0;
         }
     };
@@ -286,32 +275,12 @@ Sprite = function () {
         for (var i = 0; i < count; i++) {
             px = trans[i * 2];
             py = trans[i * 2 + 1];
-            // mozilla doesn't take into account transforms with isPointInPath >:-P
-            if (($.browser.mozilla) ? this.pointInPolygon(px, py) : this.context.isPointInPath(px, py)) {
+            if (this.context.isPointInPath(px, py)) {
                 other.collision(this);
                 this.collision(other);
                 return;
             }
         }
-    };
-    this.pointInPolygon = function (x, y) {
-        var points = this.transformedPoints();
-        var j = 2;
-        var y0, y1;
-        var oddNodes = false;
-        for (var i = 0; i < points.length; i += 2) {
-            y0 = points[i + 1];
-            y1 = points[j + 1];
-            if ((y0 < y && y1 >= y) ||
-                (y1 < y && y0 >= y)) {
-                if (points[i] + (y - y0) / (y1 - y0) * (points[j] - points[i]) < x) {
-                    oddNodes = !oddNodes;
-                }
-            }
-            j += 2
-            if (j == points.length) j = 0;
-        }
-        return oddNodes;
     };
     this.collision = function () {
     };
@@ -644,11 +613,11 @@ Asteroid = function () {
         if (other.name == "bullet") Game.score += 120 / this.scale;
         var breakDown = Math.floor(Game.score / 1500);
         breakDown += 3;
-        this.scale /= 2;
+        this.scale = this.scale / 2;
         if (this.scale > 1.5) {
             // break into fragments
             for (var i = 0; i < breakDown; i++) {
-                var roid = $.extend(true, {}, this);
+                var roid = this.clone();
                 roid.vel.x = Math.random() * 6 - 3;
                 roid.vel.y = Math.random() * 6 - 3;
                 if (Math.random() > 0.5) {
@@ -661,6 +630,16 @@ Asteroid = function () {
         }
         Game.explosionAt(other.x, other.y);
         this.die();
+    };
+    this.clone = function() {
+        var roid = new Asteroid();
+        roid.scale = this.scale;
+        roid.x = this.x
+        roid.y = this.y
+        roid.vel.x = this.vel.x;
+        roid.vel.y = this.vel.y;
+        roid.vel.rot = this.vel.rot;
+        return roid;
     };
 };
 Asteroid.prototype = new Sprite();
@@ -844,7 +823,7 @@ var SFXObjects = [
     }
 ];
 
-var SFX = {};
+var SFX = { muted: true };
 
 function ajax(url, callback, data, responseType) {
     var x;
@@ -872,26 +851,30 @@ var context = false;
 if (typeof AudioContext == 'function') {
     context = new AudioContext();
 }
-if (context) {
-    SFXObjects.forEach(function (SFXObject, sound) {
-        if (SFXObject.file != null) {
-            // load file
-            ajax(SFXObject.file, function (data) {
-                SFX[SFXObject.name] = {};
-                context.decodeAudioData(data, function (buffer) {
-                    SFX[SFXObject.name].play = function () {
-                        var source = context.createBufferSource();
-                        source.buffer = buffer;
-                        source.connect(context.destination);
-                        if (!source.start)
-                            source.start = source.noteOn;
-                        source.start(0);
-                    };
-                });
-            }, '', 'arraybuffer');
-        }
-    });
-}
+SFXObjects.forEach(function (SFXObject, sound) {
+    if (SFXObject.file == null) return;
+    // load file
+    SFX[SFXObject.name] = SFXObject;
+    if (context) {
+        ajax(SFXObject.file, function (data) {
+            context.decodeAudioData(data, function (buffer) {
+                if (SFXObject.name == 'laser') {
+                  SFX[SFXObject.name].play = () => {};
+                  return;
+                }
+                SFX[SFXObject.name].play = function () {
+                    if (SFX.muted) return;
+                    var source = context.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(context.destination);
+                    if (!source.start)
+                        source.start = source.noteOn;
+                    source.start(0);
+                };
+            });
+        }, '', 'arraybuffer');
+    }
+});
 
 var Game = {
     score: 0,
@@ -1045,28 +1028,21 @@ var Game = {
 
 var sprites = [];
 
-$(function () {
-    var canvas = $("#canvas");
-    var body = document.body,
-        html = document.documentElement;
-    var height = Math.max(body.scrollHeight, body.offsetHeight,
-        html.clientHeight, html.scrollHeight, html.offsetHeight);
-
-    var width = Math.max(body.scrollWidth, body.offsetWidth,
-        html.clientWidth, html.scrollWidth, html.offsetWidth);
-    canvas.attr('width', width);
-    canvas.attr('height', height);
-    Game.canvasWidth = canvas.width();
-    Game.canvasHeight = canvas.height();
+function init() {
+    var canvas = document.querySelector("canvas");
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    Game.canvasWidth = canvas.width;
+    Game.canvasHeight = canvas.height;
     Game.firstHighscore = true;
 
-    var context = canvas[0].getContext("2d");
+    var context = canvas.getContext("2d");
 
     Text.context = context;
     Text.face = vector_battle;
 
-    var gridWidth = Math.round(Game.canvasWidth / GRID_SIZE);
-    var gridHeight = Math.round(Game.canvasHeight / GRID_SIZE);
+    var gridWidth = Math.ceil(Game.canvasWidth / GRID_SIZE);
+    var gridHeight = Math.ceil(Game.canvasHeight / GRID_SIZE);
     var grid = new Array(gridWidth);
     for (var i = 0; i < gridWidth; i++) {
         grid[i] = new Array(gridHeight);
@@ -1089,11 +1065,19 @@ $(function () {
     // set up borders
     for (var i = 0; i < gridWidth; i++) {
         grid[i][0].dupe.vertical = Game.canvasHeight;
+        grid[i][1].dupe.vertical = Game.canvasHeight;
+        grid[i][2].dupe.vertical = Game.canvasHeight;
+        grid[i][gridHeight - 3].dupe.vertical = -Game.canvasHeight;
+        grid[i][gridHeight - 2].dupe.vertical = -Game.canvasHeight;
         grid[i][gridHeight - 1].dupe.vertical = -Game.canvasHeight;
     }
 
     for (var j = 0; j < gridHeight; j++) {
         grid[0][j].dupe.horizontal = Game.canvasWidth;
+        grid[1][j].dupe.horizontal = Game.canvasWidth;
+        grid[2][j].dupe.horizontal = Game.canvasWidth;
+        grid[gridWidth - 3][j].dupe.horizontal = -Game.canvasWidth;
+        grid[gridWidth - 2][j].dupe.horizontal = -Game.canvasWidth;
         grid[gridWidth - 1][j].dupe.horizontal = -Game.canvasWidth;
     }
 
@@ -1128,31 +1112,19 @@ $(function () {
     var elapsed;
     var delta;
 
-    var canvasNode = canvas[0];
-
     // shim layer with setTimeout fallback
     // from here:
     // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
-    window.requestAnimFrame = (function () {
-        return window.requestAnimationFrame ||
-            window.webkitRequestAnimationFrame ||
-            window.mozRequestAnimationFrame ||
-            window.oRequestAnimationFrame ||
-            window.msRequestAnimationFrame ||
-            function (/* function */ callback, /* DOMElement */ element) {
-                window.setTimeout(callback, 1000 / 60);
-            };
-    })();
-
     var mainLoop = function () {
         context.clearRect(0, 0, Game.canvasWidth, Game.canvasHeight);
 
-// Make sure the image is loaded first otherwise nothing will draw.
+    // Make sure the image is loaded first otherwise nothing will draw.
 
         Game.FSM.execute();
 
         if (KEY_STATUS.g) {
             context.beginPath();
+            context.strokeStyle = 'white';
             for (var i = 0; i < gridWidth; i++) {
                 context.moveTo(i * GRID_SIZE, 0);
                 context.lineTo(i * GRID_SIZE, Game.canvasHeight);
@@ -1214,13 +1186,13 @@ $(function () {
         if (paused) {
             Text.renderText('PAUSED', 72, Game.canvasWidth / 2 - 160, 120);
         } else {
-            requestAnimFrame(mainLoop, canvasNode);
+            requestAnimationFrame(mainLoop);
         }
     };
 
     mainLoop();
 
-    $(window).keydown(function (e) {
+    window.addEventListener('keydown', (e) => {
         switch (KEY_CODES[e.keyCode]) {
             case 'f': // show framerate
                 showFramerate = !showFramerate;
@@ -1239,12 +1211,33 @@ $(function () {
         }
     });
 
+    COUCHFRIENDS = new EventTarget();
+    COUCHFRIENDS.settings = {};
+    COUCHFRIENDS.on = (eventName, cb) => {
+      COUCHFRIENDS.addEventListener(eventName, cb);
+    };
+    COUCHFRIENDS.connect = () => {};
+    COUCHFRIENDS.send = () => {};
+
     COUCHFRIENDS.settings.apiKey = 'asteroids-1234';
     COUCHFRIENDS.settings.host = 'ws.couchfriends.com';
     COUCHFRIENDS.settings.port = '80';
     COUCHFRIENDS.connect();
 
-});
+    window.addEventListener('gamepadconnected', ({ gamepad }) => {
+      const e = new Event('player.join');
+      e.id = gamepad.index;
+      COUCHFRIENDS.dispatchEvent(e);
+    });
+
+    window.addEventListener('gamepaddisconnected', ({ gamepad }) => {
+      const e = new Event('player.left');
+      e.id = gamepad.index;
+      COUCHFRIENDS.dispatchEvent(e);
+    });
+}
+
+init();
 
 function addPlayer(playerId, color) {
 
@@ -1280,6 +1273,7 @@ function removePlayer(playerId) {
 }
 
 function unlockAchievement() {
+    return;
     for (var playerKey in Game.ships) {
         if (Game.ships.hasOwnProperty(playerKey)) {
             var jsonData = {
@@ -1364,78 +1358,45 @@ function randomColor() {
 COUCHFRIENDS.on('player.left', function (data) {
     removePlayer(data.id);
 });
-COUCHFRIENDS.on('player.buttonClick', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.player.id].bullets.length; i++) {
-        if (!Game.ships['player_' + data.player.id].bullets[i].visible) {
-            SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.player.id].bullets[i];
-            var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
-            var vectorx = Math.cos(rad);
-            var vectory = Math.sin(rad);
-            // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.player.id].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.player.id].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.player.id].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.player.id].vel.y;
-            bullet.visible = true;
-            break;
-        }
-    }
-});
 
-COUCHFRIENDS.on('player.buttonUp', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.player.id].bullets.length; i++) {
-        if (!Game.ships['player_' + data.player.id].bullets[i].visible) {
-            SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.player.id].bullets[i];
-            var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
-            var vectorx = Math.cos(rad);
-            var vectory = Math.sin(rad);
-            // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.player.id].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.player.id].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.player.id].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.player.id].vel.y;
-            bullet.visible = true;
-            break;
-        }
+function shoot(data) {
+    const ship = Game.ships['player_' + data.player.id];
+    for (const bullet of ship.bullets) {
+        if (bullet.visible) continue;
+        SFX['laser'].play();
+        var rad = ((ship.rot - 90) * Math.PI) / 180;
+        var vectorx = Math.cos(rad);
+        var vectory = Math.sin(rad);
+        // move to the nose of the ship
+        bullet.x = ship.x + vectorx * 4;
+        bullet.y = ship.y + vectory * 4;
+        bullet.vel.x = 6 * vectorx + ship.vel.x;
+        bullet.vel.y = 6 * vectory + ship.vel.y;
+        bullet.visible = true;
+        break;
     }
-});
-COUCHFRIENDS.on('player.clickUp', function (data) {
-    for (var i = 0; i < Game.ships['player_' + data.player.id].bullets.length; i++) {
-        if (!Game.ships['player_' + data.player.id].bullets[i].visible) {
-            SFX['laser'].play();
-            var bullet = Game.ships['player_' + data.player.id].bullets[i];
-            var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
-            var vectorx = Math.cos(rad);
-            var vectory = Math.sin(rad);
-            // move to the nose of the ship
-            bullet.x = Game.ships['player_' + data.player.id].x + vectorx * 4;
-            bullet.y = Game.ships['player_' + data.player.id].y + vectory * 4;
-            bullet.vel.x = 6 * vectorx + Game.ships['player_' + data.player.id].vel.x;
-            bullet.vel.y = 6 * vectory + Game.ships['player_' + data.player.id].vel.y;
-            bullet.visible = true;
-            break;
-        }
-    }
-});
+}
+COUCHFRIENDS.on('player.buttonClick', shoot);
+COUCHFRIENDS.on('player.buttonUp', shoot);
+COUCHFRIENDS.on('player.clickUp', shoot);
 COUCHFRIENDS.on('player.orientation', function (data) {
-    Game.ships['player_' + data.player.id].vel.rot = data.x * 22;
-    var rad = ((Game.ships['player_' + data.player.id].rot - 90) * Math.PI) / 180;
+    const ship = ship;
+    ship.vel.rot = data.x * 22;
+    var rad = ((ship.rot - 90) * Math.PI) / 180;
     if (data.y > 0) {
-        // show down.
-        Game.ships['player_' + data.player.id].vel.x *= 0.965;
-        Game.ships['player_' + data.player.id].vel.y *= 0.965;
-        Game.ships['player_' + data.player.id].children.exhaust.visible = false;
+        // slow down.
+        ship.vel.x *= 0.965;
+        ship.vel.y *= 0.965;
+        ship.children.exhaust.visible = false;
         return;
     }
-    Game.ships['player_' + data.player.id].acc.x = -(data.y) * Math.cos(rad);
-    Game.ships['player_' + data.player.id].acc.y = -(data.y) * Math.sin(rad);
-    Game.ships['player_' + data.player.id].children.exhaust.visible = Math.random() > 0.1;
+    ship.acc.x = -(data.y) * Math.cos(rad);
+    ship.acc.y = -(data.y) * Math.sin(rad);
+    ship.children.exhaust.visible = Math.random() > 0.1;
 
-    if (Math.sqrt(Game.ships['player_' + data.player.id].vel.x * Game.ships['player_' + data.player.id].vel.x + Game.ships['player_' + data.player.id].vel.y * Game.ships['player_' + data.player.id].vel.y) > 8) {
-        Game.ships['player_' + data.player.id].vel.x *= 0.95;
-        Game.ships['player_' + data.player.id].vel.y *= 0.95;
+    if (Math.sqrt(ship.vel.y) > 8) {
+        ship.vel.x *= 0.95;
+        ship.vel.y *= 0.95;
     }
 
 });
