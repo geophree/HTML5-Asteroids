@@ -2,6 +2,7 @@
 //
 // Copyright (c) 2010 Doug McInnes
 //
+import { startHost } from './host.js';
 
 var KEY_CODES = {
     32: 'space',
@@ -16,8 +17,8 @@ var KEY_CODES = {
     80: 'p'
 };
 
-KEY_STATUS = {keyDown: false};
-for (code in KEY_CODES) {
+const KEY_STATUS = {keyDown: false};
+for (const code in KEY_CODES) {
     KEY_STATUS[KEY_CODES[code]] = false;
 }
 
@@ -36,9 +37,9 @@ window.addEventListener("keyup", (e) => {
     }
 });
 
-GRID_SIZE = 60;
+const GRID_SIZE = 60;
 
-Matrix = function (rows, columns) {
+const Matrix = function (rows, columns) {
     var i, j;
     this.data = new Array(rows);
     for (i = 0; i < rows; i++) {
@@ -75,7 +76,7 @@ Matrix = function (rows, columns) {
     };
 };
 
-Sprite = function () {
+const Sprite = function () {
     this.init = function (name, points, color) {
         if (color != null) {
             this.color = color;
@@ -222,7 +223,7 @@ Sprite = function () {
 
         this.context.lineWidth = 3.0 / this.scale;
 
-        for (child in this.children) {
+        for (const child in this.children) {
             this.children[child].draw();
         }
 
@@ -341,7 +342,7 @@ Sprite = function () {
 
 };
 
-Ship = function (color) {
+const Ship = function (color) {
     this.init("ship",
         [-15, 4,
             0, -32,
@@ -383,7 +384,7 @@ Ship = function (color) {
 };
 Ship.prototype = new Sprite();
 
-BigAlien = function () {
+const BigAlien = function () {
     this.init("bigalien",
         [-20, 0,
             -12, -4,
@@ -468,7 +469,7 @@ BigAlien = function () {
             this.bulletCounter = 22;
             for (var i = 0; i < this.bullets.length; i++) {
                 if (!this.bullets[i].visible) {
-                    bullet = this.bullets[i];
+                    const bullet = this.bullets[i];
                     var rad = 2 * Math.PI * Math.random();
                     var vectorx = Math.cos(rad);
                     var vectory = Math.sin(rad);
@@ -510,7 +511,7 @@ BigAlien = function () {
 };
 BigAlien.prototype = new Sprite();
 
-Bullet = function () {
+const Bullet = function () {
 
     this.init("bullet",
         [0, 0],
@@ -561,7 +562,7 @@ Bullet = function () {
 };
 Bullet.prototype = new Sprite();
 
-AlienBullet = function () {
+const AlienBullet = function () {
     this.init("alienbullet");
     this.color = '#ff0000';
 
@@ -580,7 +581,7 @@ AlienBullet = function () {
 };
 AlienBullet.prototype = new Bullet();
 
-Asteroid = function () {
+const Asteroid = function () {
     this.init("asteroid",
         [-10, 0,
             -5, 7,
@@ -636,7 +637,7 @@ Asteroid = function () {
 };
 Asteroid.prototype = new Sprite();
 
-Explosion = function () {
+const Explosion = function () {
     this.init("explosion");
 
     this.bridgesH = false;
@@ -677,7 +678,7 @@ Explosion = function () {
 };
 Explosion.prototype = new Sprite();
 
-GridNode = function () {
+const GridNode = function () {
     this.north = null;
     this.south = null;
     this.east = null;
@@ -728,7 +729,7 @@ GridNode = function () {
 
 // borrowed from typeface-0.14.js
 // http://typeface.neocracy.org
-Text = {
+const Text = {
     renderGlyph: function (ctx, face, char) {
 
         var glyph = face.glyphs[char];
@@ -1022,6 +1023,9 @@ function init() {
     canvas.height = canvas.clientHeight;
     Game.canvasWidth = canvas.width;
     Game.canvasHeight = canvas.height;
+    const qr = startHost().then(qr => {
+      document.body.insertBefore(qr, canvas);
+    });
 
     var context = canvas.getContext("2d");
 
@@ -1114,8 +1118,8 @@ function init() {
             if (!ship || ship.name === 'ship-dead') continue;
             if (!ship.didShot && con.buttons[0].pressed) shoot(playerId);
             ship.didShot = con.buttons[0].pressed;
-            accel = -deadZone(con.axes[1]);
-            rot = deadZone(con.axes[0]) / 5;
+            const accel = -deadZone(con.axes[1]);
+            const rot = deadZone(con.axes[0]) / 5;
             updateMotion(playerId, rot, accel);
         }
 
@@ -1295,8 +1299,8 @@ function updateMotion(playerId, rotation, accel) {
 
     ship.children.exhaust.visible = Math.random() > 0.1;
 
-    accelX = accel * Math.cos(rad);
-    accelY = accel * Math.sin(rad);
+    let accelX = accel * Math.cos(rad);
+    let accelY = accel * Math.sin(rad);
 
     if (ship.vel.x ** 2 + ship.vel.y ** 2 > 32 ** 2) {
         if (Math.sign(accelX) === Math.sign(ship.vel.x)) accelX = 0;
