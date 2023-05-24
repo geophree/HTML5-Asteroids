@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2010 Doug McInnes
 //
-import { startHost } from './web-gamepad/host.js';
+import { startHost } from 'https://geophree.github.io/web-gamepad/host.js';
 
 var KEY_CODES = {
     32: 'space',
@@ -1017,15 +1017,14 @@ var Game = {
 
 var sprites = [];
 
-function init() {
+async function init() {
     var canvas = document.querySelector("canvas");
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     Game.canvasWidth = canvas.width;
     Game.canvasHeight = canvas.height;
-    const qr = startHost().then(qr => {
-      document.body.insertBefore(qr, canvas);
-    });
+    const host = await startHost()
+    document.body.insertBefore(host.getQrCode(), canvas);
 
     var context = canvas.getContext("2d");
 
@@ -1221,7 +1220,7 @@ function init() {
     });
 }
 
-init();
+await init();
 
 function addPlayer(playerId, color) {
 
