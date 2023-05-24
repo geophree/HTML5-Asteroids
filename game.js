@@ -2,7 +2,7 @@
 //
 // Copyright (c) 2010 Doug McInnes
 //
-import { startHost } from './host.js';
+import { startHost } from './web-gamepad/host.js';
 
 var KEY_CODES = {
     32: 'space',
@@ -824,7 +824,7 @@ function ajax(url, callback, data, responseType) {
         responseType = 'text';
     }
     try {
-        x = new (this.XMLHttpRequest || ActiveXObject)('MSXML2.XMLHTTP.3.0');
+        x = new XMLHttpRequest('MSXML2.XMLHTTP.3.0');
         x.open(data ? 'POST' : 'GET', url, 1);
         x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         x.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
