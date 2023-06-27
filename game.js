@@ -1108,23 +1108,22 @@ async function init() {
     var mainLoop = function () {
         context.clearRect(0, 0, Game.canvasWidth, Game.canvasHeight);
 
-        const deadZone = (axis) =>
-            Math.sign(axis) * Math.max(Math.abs(axis) - .1, 0) / .9;
         for (const con of navigator.getGamepads()) {
             if (!con?.connected) continue;
             const playerId = con.index;
             const ship = Game.ships['player_' + playerId];
             if (!ship || ship.name === 'ship-dead') continue;
-            if (!ship.didShot && con.buttons[0].pressed) shoot(playerId);
-            ship.didShot = con.buttons[0].pressed;
+            const pressedShootButton = con.buttons[0]?.pressed ?? false;
+            if (!ship.didShot && pressedShootButton) shoot(playerId);
+            ship.didShot = pressedShootButton;
             // 1 is b, 12 is d-pad up
-            const accel = Math.max(con.buttons[1].value, con.buttons[12].value);
+            const accel = Math.max(con.buttons[1]?.value ?? 0, con.buttons[12]?.value ?? 0);
             // 14 is d-pad left, 15 is d-pad right
-            const rot = -con.buttons[14].value + con.buttons[15].value;
-            let x = con.axes[0];
-            const y = con.axes[1];
+            let rot = -(con.buttons[14]?.value ?? 0) + (con.buttons[15]?.value ?? 0);
+            let x = con.axes[0] ?? 0;
+            const y = con.axes[1] ?? 0;
             let angle;
-            if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) {
+            if (x ** 2 + y ** 2 > .25 ** 2) {
               if (x === 0) x = 0; // get rid of -0, it gives us the wrong Infinity
               // angle * PI = radians
               angle = (((5 - Math.sign(x == 0 ? 1 : x))) / 2 + Math.atan(-y / x) / Math.PI) % 2;
