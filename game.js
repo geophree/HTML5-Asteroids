@@ -1117,9 +1117,21 @@ async function init() {
             if (!ship || ship.name === 'ship-dead') continue;
             if (!ship.didShot && con.buttons[0].pressed) shoot(playerId);
             ship.didShot = con.buttons[0].pressed;
-            const accel = -deadZone(con.axes[1]);
-            const rot = deadZone(con.axes[0]) / 5;
-            updateMotion(playerId, rot, accel);
+            // 1 is b, 12 is d-pad up
+            const accel = Math.max(con.buttons[1].value, con.buttons[12].value);
+            // 14 is d-pad left, 15 is d-pad right
+            const rot = -con.buttons[14].value + con.buttons[15].value;
+            let x = con.axes[0];
+            const y = con.axes[1];
+            let angle;
+            if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) {
+              if (x === 0) x = 0; // get rid of -0, it gives us the wrong Infinity
+              // angle * PI = radians
+              angle = (((5 - Math.sign(x == 0 ? 1 : x))) / 2 + Math.atan(-y / x) / Math.PI) % 2;
+              // convert into Asteroid's whacky internal angel
+              angle = 90 - angle * 360 / 2;
+            }
+            updateMotion(playerId, rot, accel, angle);
         }
 
         // Make sure the image is loaded first otherwise nothing will draw.
@@ -1282,11 +1294,14 @@ function shoot(playerId) {
     }
 }
 
-function updateMotion(playerId, rotation, accel) {
+function updateMotion(playerId, rotation, accel, angle) {
     const ship = Game.ships['player_' + playerId];
-    ship.vel.rot = rotation * 22;
+    ship.vel.rot = rotation * 6;
+    if (angle != null) {
+      ship.rot = angle;
+    }
     var rad = ((ship.rot - 90) * Math.PI) / 180;
-    if (accel < 0) {
+    if (accel <= 0) {
         ship.acc.x = 0;
         ship.acc.y = 0;
     //     // slow down.
